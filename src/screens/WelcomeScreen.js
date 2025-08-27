@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
   Alert,
   ScrollView,
 } from 'react-native';
@@ -14,6 +13,8 @@ import { useAppContext } from '../contexts/AppContext';
 import { colors } from '../constants/colors';
 import InterestCard from '../components/InterestCard';
 import CustomButton from '../components/CustomButton';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "../../firebase"; // adjust relative path if needed
 
 const interests = [
   { id: 'coffee shop', label: 'Coffee Shops', icon: 'local-cafe' },
@@ -27,13 +28,19 @@ const interests = [
 export default function WelcomeScreen({ navigation }) {
   const { state, toggleInterest, getCurrentLocation, completeOnboarding } = useAppContext();
   const [isLocationLoading, setIsLocationLoading] = useState(false);
-  
+
   useEffect(() => {
-    // If user has already completed onboarding, navigate to home
-    if (!state.isFirstVisit && state.selectedInterests.length > 0) {
-      navigation.replace('Home');
-    }
-  }, [state.isFirstVisit, state.selectedInterests.length, navigation]);
+    const checkOnboarding = async () => {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        const flag = await AsyncStorage.getItem(`onboardingDone_${userId}`);
+        if (flag) {
+          navigation.replace('Home');
+        }
+      }
+    };
+    checkOnboarding();
+  }, [navigation]);
 
   const handleStartJourney = async () => {
     if (state.selectedInterests.length === 0) {
@@ -41,20 +48,32 @@ export default function WelcomeScreen({ navigation }) {
       return;
     }
 
+    setIsLocationLoading(true);
+
     try {
-      setIsLocationLoading(true);
-      
-      // Get location permission and current location
-      await getCurrentLocation();
-      
-      // Complete onboarding
-      await completeOnboarding();
-      
-      // Navigate to home screen
-      navigation.replace('Home');
+      // Try to get location with a timeout (so it doesn’t hang forever)
+      const locationPromise = getCurrentLocation();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Location timeout")), 5000)
+      );
+      await Promise.race([locationPromise, timeoutPromise]);
     } catch (error) {
-      // Even if location fails, allow user to proceed
+      console.log("Location error:", error.message);
+      // Ignore location error, allow onboarding to continue
+    }
+
+    try {
       await completeOnboarding();
+
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        await AsyncStorage.setItem(`onboardingDone_${userId}`, "true");
+        await AsyncStorage.setItem(
+          `interests_${userId}`,
+          JSON.stringify(state.selectedInterests)
+        );
+      }
+
       navigation.replace('Home');
     } finally {
       setIsLocationLoading(false);
@@ -137,21 +156,10 @@ export default function WelcomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 30,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+  scrollContainer: { flexGrow: 1, paddingHorizontal: 20 },
+  header: { alignItems: 'center', paddingTop: 40, paddingBottom: 30 },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -173,9 +181,7 @@ const styles = StyleSheet.create({
     padding: 25,
     marginTop: 20,
   },
-  interestsSection: {
-    marginBottom: 30,
-  },
+  interestsSection: { marginBottom: 30 },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -222,10 +228,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  startButton: {
-    marginBottom: 20,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
+  startButton: { marginBottom: 20 },
+  disabledButton: { opacity: 0.6 },
 });

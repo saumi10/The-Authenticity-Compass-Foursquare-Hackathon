@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAppContext } from '../contexts/AppContext';
@@ -17,7 +18,11 @@ import InterestCard from '../components/InterestCard';
 import PlaceCard from '../components/PlaceCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import CustomButton from '../components/CustomButton';
 import ApiService from '../services/apiService';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const interests = [
   { id: 'coffee shop', label: 'Coffee Shops', icon: 'local-cafe' },
@@ -25,12 +30,15 @@ const interests = [
   { id: 'bookstore', label: 'Bookstores', icon: 'book' },
   { id: 'art gallery', label: 'Art Galleries', icon: 'palette' },
   { id: 'music venue', label: 'Music Venues', icon: 'music-note' },
+  { id: 'bar', label: 'Bars & Pubs', icon: 'wine-bar' },
 ];
 
 export default function HomeScreen({ navigation }) {
   const { state, dispatch, toggleInterest, getCurrentLocation, saveUserPreferences } = useAppContext();
   const [refreshing, setRefreshing] = useState(false);
   const [locationText, setLocationText] = useState('Getting location...');
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [tempSelectedInterests, setTempSelectedInterests] = useState([]);
 
   useEffect(() => {
     initializeHome();
@@ -173,8 +181,67 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const openSettings = () => {
-    navigation.navigate('Welcome');
+  const openPreferencesModal = () => {
+    setTempSelectedInterests([...state.selectedInterests]);
+    setShowPreferencesModal(true);
+  };
+
+  const handleTempInterestToggle = (interestId) => {
+    setTempSelectedInterests(prev => {
+      if (prev.includes(interestId)) {
+        return prev.filter(id => id !== interestId);
+      } else {
+        return [...prev, interestId];
+      }
+    });
+  };
+
+  const savePreferences = async () => {
+    if (tempSelectedInterests.length === 0) {
+      Alert.alert('Select Interests', 'Please select at least one interest.');
+      return;
+    }
+
+    try {
+      // Update the interests in context
+      dispatch({ type: 'SET_SELECTED_INTERESTS', payload: tempSelectedInterests });
+      
+      // Save to AsyncStorage
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        await AsyncStorage.setItem(
+          `interests_${userId}`,
+          JSON.stringify(tempSelectedInterests)
+        );
+      }
+
+      await saveUserPreferences();
+      setShowPreferencesModal(false);
+      
+      // Reload recommendations with new interests
+      if (tempSelectedInterests.length > 0) {
+        await loadRecommendations();
+      }
+      
+      Alert.alert('Success', 'Your preferences have been updated!');
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      Alert.alert('Error', 'Failed to save preferences. Please try again.');
+    }
+  };
+
+  const cancelPreferences = () => {
+    setTempSelectedInterests([...state.selectedInterests]);
+    setShowPreferencesModal(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigation.replace('Login');
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -185,11 +252,13 @@ export default function HomeScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header with Settings */}
+        {/* Header with Settings + Logout */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.settingsButton} onPress={openSettings}>
-            <MaterialIcons name="settings" size={24} color="white" />
-          </TouchableOpacity>
+          <View style={styles.rightButtons}>
+            <TouchableOpacity style={[styles.iconButton, styles.logoutBtn]} onPress={handleLogout}>
+              <MaterialIcons name="logout" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Recommendations Section */}
@@ -230,20 +299,18 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Interests Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What interests you?</Text>
-          <View style={styles.interestsGrid}>
-            {interests.map((interest) => (
-              <InterestCard
-                key={interest.id}
-                interest={interest}
-                isSelected={state.selectedInterests.includes(interest.id)}
-                onPress={() => handleInterestToggle(interest.id)}
-                style={styles.interestCard}
-              />
-            ))}
-          </View>
+        <View style={styles.interestsGrid}>
+        {interests.map((interest) => (
+            <InterestCard
+            key={interest.id}
+            interest={interest}
+            isSelected={state.selectedInterests.includes(interest.id)}
+            onPress={() => handleInterestToggle(interest.id)}
+            style={styles.interestCard}
+            />
+        ))}
         </View>
+
 
         {/* Search Section */}
         <View style={styles.section}>
@@ -265,6 +332,62 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Preferences Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showPreferencesModal}
+        onRequestClose={cancelPreferences}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Update Your Preferences</Text>
+              <TouchableOpacity onPress={cancelPreferences} style={styles.closeButton}>
+                <MaterialIcons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.modalSubtitle}>
+                Select your interests to get personalized recommendations
+              </Text>
+              
+              <View style={styles.modalInterestsGrid}>
+                {interests.map((interest) => (
+                  <InterestCard
+                    key={interest.id}
+                    interest={interest}
+                    isSelected={tempSelectedInterests.includes(interest.id)}
+                    onPress={() => handleTempInterestToggle(interest.id)}
+                    style={styles.modalInterestCard}
+                  />
+                ))}
+              </View>
+
+              <Text style={styles.selectionCount}>
+                {tempSelectedInterests.length} of {interests.length} interests selected
+              </Text>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.cancelButton} onPress={cancelPreferences}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <CustomButton
+                title="Save Preferences"
+                onPress={savePreferences}
+                disabled={tempSelectedInterests.length === 0}
+                style={[
+                  styles.saveButton,
+                  tempSelectedInterests.length === 0 && styles.disabledButton
+                ]}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -284,10 +407,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  settingsButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 8,
-    borderRadius: 20,
+  rightButtons: {
+    flexDirection: 'row',
+  },
+  iconButton: {
+    padding: 10,
+    borderRadius: 25,
+    marginLeft: 10,
+  },
+  settingsBtn: {
+    backgroundColor: '#007BFF', // Blue
+  },
+  logoutBtn: {
+    backgroundColor: '#000000', // Black
   },
   section: {
     backgroundColor: 'white',
@@ -325,14 +457,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   interestsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  interestCard: {
-    width: '48%',
-    marginBottom: 15,
-  },
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'center', // center instead of space-between
+  gap: 12, // spacing between buttons
+  paddingHorizontal: 10,
+  marginTop: 10,
+},
+
+interestCard: {
+  width: 140, // fixed width, not % based
+  marginBottom: 12,
+},
   locationInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -361,5 +497,86 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    margin: 20,
+    maxHeight: '80%',
+    width: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  closeButton: {
+    padding: 5,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalInterestsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  modalInterestCard: {
+    width: '48%',
+    marginBottom: 15,
+  },
+  selectionCount: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 25,
+    paddingVertical: 15,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
