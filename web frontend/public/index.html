@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticity Compass - Discover Authentic Places</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Welcome Modal -->
+    <div class="modal-overlay" id="welcomeModal">
+        <div class="modal-content welcome-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-compass"></i> Welcome to Authenticity Compass!</h2>
+                <p>Let's personalize your discovery experience</p>
+            </div>
+            <div class="modal-body">
+                <h3>What interests you most?</h3>
+                <p>Select your preferences to get personalized recommendations</p>
+                <div class="modal-interests-grid" id="modalInterestsGrid">
+                    <button class="modal-interest-btn" data-interest="coffee shop">
+                        <i class="fas fa-coffee"></i>
+                        <span>Coffee Shops</span>
+                    </button>
+                    <button class="modal-interest-btn" data-interest="restaurant">
+                        <i class="fas fa-utensils"></i>
+                        <span>Restaurants</span>
+                    </button>
+                    <button class="modal-interest-btn" data-interest="bookstore">
+                        <i class="fas fa-book"></i>
+                        <span>Bookstores</span>
+                    </button>
+                    <button class="modal-interest-btn" data-interest="art gallery">
+                        <i class="fas fa-palette"></i>
+                        <span>Art Galleries</span>
+                    </button>
+                    <button class="modal-interest-btn" data-interest="music venue">
+                        <i class="fas fa-music"></i>
+                        <span>Music Venues</span>
+                    </button>
+                    <button class="modal-interest-btn" data-interest="bar">
+                        <i class="fas fa-cocktail"></i>
+                        <span>Bars & Pubs</span>
+                    </button>
+                </div>
+                <div class="location-permission">
+                    <h4><i class="fas fa-map-marker-alt"></i> Location Access</h4>
+                    <p>We'll use your location to find authentic places nearby</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="startJourneyBtn">Start My Journey</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Place Details Modal -->
+    <div class="modal-overlay" id="placeDetailsModal">
+        <div class="modal-content place-details-modal">
+            <div class="modal-header">
+                <button class="close-btn" id="closePlaceModal">&times;</button>
+                <div id="placeModalContent">
+                    <!-- Content will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-compass"></i> Authenticity Compass</h1>
+                <p>Discover genuine, local experiences</p>
+                <button class="settings-btn" id="settingsBtn">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Personalized Recommendations -->
+        <section class="recommendations-section" id="recommendationsSection" style="display: none;">
+            <div class="section-header">
+                <h2><i class="fas fa-star"></i> Recommended for You</h2>
+                <p>Based on your interests and location</p>
+            </div>
+            <div class="recommendations-container" id="recommendationsContainer">
+                <!-- Recommendations will be populated here -->
+            </div>
+        </section>
+
+        <!-- Interest Selection -->
+        <section class="interests-section">
+            <h2>What interests you?</h2>
+            <div class="interests-grid" id="interestsGrid">
+                <button class="interest-btn" data-interest="coffee shop">
+                    <i class="fas fa-coffee"></i>
+                    <span>Coffee Shops</span>
+                </button>
+                <button class="interest-btn" data-interest="restaurant">
+                    <i class="fas fa-utensils"></i>
+                    <span>Restaurants</span>
+                </button>
+                <button class="interest-btn" data-interest="bookstore">
+                    <i class="fas fa-book"></i>
+                    <span>Bookstores</span>
+                </button>
+                <button class="interest-btn" data-interest="art gallery">
+                    <i class="fas fa-palette"></i>
+                    <span>Art Galleries</span>
+                </button>
+                <button class="interest-btn" data-interest="music venue">
+                    <i class="fas fa-music"></i>
+                    <span>Music Venues</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search for places..." />
+                    <button id="searchBtn">Search</button>
+                </div>
+                <div class="location-info">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span id="locationText">Getting location...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section">
+            <div class="results-header">
+                <h3 id="resultsTitle">Top Authentic Places</h3>
+                <span id="resultsCount" class="count-badge">0 results</span>
+            </div>
+            <div class="loading-spinner" id="loadingSpinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Finding authentic places...</span>
+            </div>
+            <div class="results-container" id="resultsContainer">
+                <!-- Results will be populated here -->
+            </div>
+        </section>
+
+        <!-- Map Placeholder -->
+        <section class="map-section">
+            <div class="map-placeholder">
+                <i class="fas fa-map"></i>
+                <p>Interactive map coming soon...</p>
+                <p class="map-note">Will show your location and discovered places</p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Powered by Foursquare Places API</p>
+        </footer>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+</html>

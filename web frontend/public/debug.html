@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Authenticity Compass</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🧭 Debug Mode - Authenticity Compass</h1>
+        
+        <div class="debug-section">
+            <h2>🔍 Server Connection Test</h2>
+            <button id="testConnection">Test Server Connection</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>🎯 Interest Selection</h2>
+            <div class="interests-grid">
+                <div class="interest-card" data-interest="coffee">☕ Coffee</div>
+                <div class="interest-card" data-interest="restaurant">🍽️ Restaurant</div>
+                <div class="interest-card" data-interest="bookstore">📚 Bookstore</div>
+                <div class="interest-card" data-interest="park">🌳 Park</div>
+                <div class="interest-card" data-interest="museum">🏛️ Museum</div>
+            </div>
+            <div class="selected-interests">
+                <strong>Selected:</strong> <span id="selectedList">None</span>
+            </div>
+            <button id="testDiscover">Test Discover API</button>
+        </div>
+
+        <div class="debug-section">
+            <h2>🔍 Search Test</h2>
+            <input type="text" id="searchInput" placeholder="Search for places..." value="coffee">
+            <button id="testSearch">Test Search API</button>
+        </div>
+
+        <div class="debug-section">
+            <h2>📍 Location Test</h2>
+            <button id="testLocation">Get My Location</button>
+            <div id="locationStatus"></div>
+        </div>
+
+        <div class="results-container" id="results"></div>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+</html>
