@@ -36,6 +36,7 @@ export default function InterestCard({ interest, isSelected, onPress, style }) {
 
 const styles = StyleSheet.create({
   container: {
+    width: '48%',
     marginBottom: 10,
   },
   card: {
