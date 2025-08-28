@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,8 +15,11 @@ import {
   formatDistance,
   openDirections 
 } from '../utils/helpers';
+import AIReviewModal from './AIReviewModal';
 
 export default function PlaceCard({ place, onPress, style, animationDelay = 0 }) {
+  const [showAIReview, setShowAIReview] = useState(false);
+
   const address = place.location?.formatted_address || 'Address not available';
   const category = place.categories && place.categories[0] 
     ? place.categories[0].name 
@@ -27,121 +31,143 @@ export default function PlaceCard({ place, onPress, style, animationDelay = 0 })
     e.stopPropagation();
     if (place.latitude && place.longitude) {
       openDirections(place.latitude, place.longitude, place.name);
+    } else {
+      Alert.alert('Location Not Available', 'Coordinates not available for this place');
     }
   };
 
+  const handleAIReview = (e) => {
+    e.stopPropagation();
+    setShowAIReview(true);
+  };
+
   return (
-    <TouchableOpacity
-      style={[styles.container, style]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <View style={styles.card}>
-        {/* Header with Image Placeholder */}
-        <LinearGradient
-          colors={[colors.primary, colors.primaryDark]}
-          style={styles.imageContainer}
-        >
-          <MaterialIcons
-            name={getPlaceIcon(category)}
-            size={32}
-            color="white"
-          />
-        </LinearGradient>
+    <>
+      <TouchableOpacity
+        style={[styles.container, style]}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.card}>
+          {/* Header with Image Placeholder */}
+          <LinearGradient
+            colors={[colors.primary, colors.primaryDark]}
+            style={styles.imageContainer}
+          >
+            <MaterialIcons
+              name={getPlaceIcon(category)}
+              size={32}
+              color="white"
+            />
+          </LinearGradient>
 
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Header Row */}
-          <View style={styles.header}>
-            <View style={styles.placeInfo}>
-              <Text style={styles.name} numberOfLines={1}>
-                {place.name}
-              </Text>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{category}</Text>
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Header Row */}
+            <View style={styles.header}>
+              <View style={styles.placeInfo}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {place.name}
+                </Text>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryText}>{category}</Text>
+                </View>
               </View>
-            </View>
-            
-            <View style={[styles.authenticityBadge, { backgroundColor: authenticityColor }]}>
-              <Text style={styles.authenticityText}>
-                {place.authenticityScore}/100
-              </Text>
-            </View>
-          </View>
-
-          {/* Address and Distance */}
-          <View style={styles.locationInfo}>
-            <Text style={styles.address} numberOfLines={2}>
-              {address}
-            </Text>
-            {place.distance && (
-              <Text style={styles.distance}>{distance}</Text>
-            )}
-          </View>
-
-          {/* Details */}
-          <View style={styles.details}>
-            {place.tel && (
-              <View style={styles.detailItem}>
-                <MaterialIcons name="phone" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailText}>Phone available</Text>
-              </View>
-            )}
-            
-            {place.website && (
-              <View style={styles.detailItem}>
-                <MaterialIcons name="language" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailText}>Has website</Text>
-              </View>
-            )}
-            
-            <View style={styles.detailItem}>
-              <MaterialIcons 
-                name={place.chains && place.chains.length > 0 ? "link" : "star"} 
-                size={16} 
-                color={colors.textSecondary} 
-              />
-              <Text style={styles.detailText}>
-                {place.chains && place.chains.length > 0 
-                  ? `Part of ${place.chains[0].name}`
-                  : 'Independent Business'
-                }
-              </Text>
-            </View>
-
-            {place.date_created && (
-              <View style={styles.detailItem}>
-                <MaterialIcons name="calendar-today" size={16} color={colors.textSecondary} />
-                <Text style={styles.detailText}>
-                  Since {new Date(place.date_created).getFullYear()}
+              
+              <View style={[styles.authenticityBadge, { backgroundColor: authenticityColor }]}>
+                <Text style={styles.authenticityText}>
+                  {place.authenticityScore}/100
                 </Text>
               </View>
-            )}
-          </View>
+            </View>
 
-          {/* Actions */}
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.directionsButton]}
-              onPress={handleDirections}
-            >
-              <MaterialIcons name="directions" size={16} color="white" />
-              <Text style={styles.actionButtonText}>Directions</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.actionButton, styles.detailsButton]}
-              onPress={onPress}
-            >
-              <MaterialIcons name="info" size={16} color={colors.primary} />
-              <Text style={[styles.actionButtonText, styles.detailsButtonText]}>
-                Details
+            {/* Address and Distance */}
+            <View style={styles.locationInfo}>
+              <Text style={styles.address} numberOfLines={2}>
+                {address}
               </Text>
+              {place.distance && (
+                <Text style={styles.distance}>{distance}</Text>
+              )}
+            </View>
+
+            {/* AI Review Button (moved here) */}
+            <TouchableOpacity style={styles.aiReviewButton} onPress={handleAIReview}>
+              <MaterialIcons name="star" size={16} color={colors.primary} />
+              <Text style={styles.aiReviewText}>AI Review</Text>
             </TouchableOpacity>
+
+            {/* Details */}
+            <View style={styles.details}>
+              {place.tel && (
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="phone" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailText}>Phone available</Text>
+                </View>
+              )}
+              
+              {place.website && (
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="language" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailText}>Has website</Text>
+                </View>
+              )}
+              
+              <View style={styles.detailItem}>
+                <MaterialIcons 
+                  name={place.chains && place.chains.length > 0 ? "link" : "star"} 
+                  size={16} 
+                  color={colors.textSecondary} 
+                />
+                <Text style={styles.detailText}>
+                  {place.chains && place.chains.length > 0 
+                    ? `Part of ${place.chains[0].name}`
+                    : 'Independent Business'
+                  }
+                </Text>
+              </View>
+
+              {place.date_created && (
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="calendar-today" size={16} color={colors.textSecondary} />
+                  <Text style={styles.detailText}>
+                    Since {new Date(place.date_created).getFullYear()}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Actions (Directions + Details only) */}
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.directionsButton]}
+                onPress={handleDirections}
+              >
+                <MaterialIcons name="directions" size={16} color="white" />
+                <Text style={styles.actionButtonText}>Directions</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, styles.detailsButton]}
+                onPress={onPress}
+              >
+                <MaterialIcons name="info" size={16} color={colors.primary} />
+                <Text style={[styles.actionButtonText, styles.detailsButtonText]}>
+                  Details
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      {/* AI Review Modal */}
+      <AIReviewModal
+        visible={showAIReview}
+        onClose={() => setShowAIReview(false)}
+        place={place}
+      />
+    </>
   );
 }
 
@@ -208,7 +234,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   locationInfo: {
-    marginBottom: 15,
+    marginBottom: 10,
   },
   address: {
     fontSize: 14,
@@ -219,6 +245,25 @@ const styles = StyleSheet.create({
   distance: {
     fontSize: 12,
     color: colors.textLight,
+  },
+  // New AI button
+  aiReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    marginBottom: 12,
+  },
+  aiReviewText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 6,
   },
   details: {
     marginBottom: 15,
@@ -250,15 +295,15 @@ const styles = StyleSheet.create({
   directionsButton: {
     backgroundColor: colors.primary,
   },
-  detailsButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: 'white',
+  },
+  detailsButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   detailsButtonText: {
     color: colors.primary,

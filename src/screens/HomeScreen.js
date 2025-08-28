@@ -20,9 +20,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import CustomButton from '../components/CustomButton';
 import ApiService from '../services/apiService';
+import NotificationService from '../services/NotificationService';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const interests = [
   { id: 'coffee shop', label: 'Coffee Shops', icon: 'local-cafe' },
@@ -34,14 +34,26 @@ const interests = [
 ];
 
 export default function HomeScreen({ navigation }) {
-  const { state, dispatch, toggleInterest, getCurrentLocation, saveUserPreferences } = useAppContext();
+  const { state, dispatch, toggleInterest, getCurrentLocation, saveUserPreferences, clearUserData } = useAppContext();
   const [refreshing, setRefreshing] = useState(false);
   const [locationText, setLocationText] = useState('Getting location...');
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [tempSelectedInterests, setTempSelectedInterests] = useState([]);
+  
+  // Travel Mode states
+  const [travelModeEnabled, setTravelModeEnabled] = useState(false);
+  const [isEnablingTravelMode, setIsEnablingTravelMode] = useState(false);
 
   useEffect(() => {
     initializeHome();
+    checkTravelModeStatus();
+    
+    // Setup notification response listener
+    const notificationListener = NotificationService.setupNotificationResponseListener(navigation);
+    
+    return () => {
+      notificationListener?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -64,13 +76,95 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const checkTravelModeStatus = async () => {
+    try {
+      const enabled = await NotificationService.isTravelModeEnabled();
+      setTravelModeEnabled(enabled);
+    } catch (error) {
+      console.error('Error checking travel mode status:', error);
+    }
+  };
+
+  const handleTravelModeToggle = async () => {
+    if (travelModeEnabled) {
+      // Disable travel mode
+      try {
+        setIsEnablingTravelMode(true);
+        await NotificationService.disableTravelMode();
+        setTravelModeEnabled(false);
+        Alert.alert('Travel Mode Disabled', 'You will no longer receive location-based notifications.');
+      } catch (error) {
+        Alert.alert('Error', 'Failed to disable Travel Mode. Please try again.');
+        console.error('Travel mode disable error:', error);
+      } finally {
+        setIsEnablingTravelMode(false);
+      }
+    } else {
+      // Enable travel mode
+      if (state.selectedInterests.length === 0) {
+        Alert.alert(
+          'Select Preferences First', 
+          'Please select at least one interest to enable Travel Mode.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Select Interests', onPress: openPreferencesModal }
+          ]
+        );
+        return;
+      }
+
+      try {
+        setIsEnablingTravelMode(true);
+        
+        // Check if background permissions are already granted
+        const hasBackgroundPermission = await NotificationService.checkBackgroundPermissionStatus();
+        
+        if (!hasBackgroundPermission) {
+          Alert.alert(
+            'Background Location Required',
+            'Travel Mode needs background location access to find authentic places even when the app is closed. You may need to manually enable this in your device settings.',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => setIsEnablingTravelMode(false) },
+              { text: 'Continue', onPress: async () => {
+                try {
+                  await NotificationService.enableTravelMode(state.selectedInterests);
+                  setTravelModeEnabled(true);
+                  Alert.alert(
+                    'Travel Mode Enabled', 
+                    'You will receive notifications about authentic places every 2 minutes based on your location and preferences.'
+                  );
+                } catch (error) {
+                  Alert.alert('Permission Error', error.message || 'Failed to enable Travel Mode. Please try again.');
+                  console.error('Travel mode enable error:', error);
+                } finally {
+                  setIsEnablingTravelMode(false);
+                }
+              }}
+            ]
+          );
+        } else {
+          await NotificationService.enableTravelMode(state.selectedInterests);
+          setTravelModeEnabled(true);
+          Alert.alert(
+            'Travel Mode Enabled', 
+            'You will receive notifications about authentic places every 2 minutes based on your location and preferences.'
+          );
+        }
+      } catch (error) {
+        Alert.alert('Error', error.message || 'Failed to enable Travel Mode. Please try again.');
+        console.error('Travel mode enable error:', error);
+        setIsEnablingTravelMode(false);
+      }
+    }
+  };
+
   const updateLocationText = () => {
     if (state.currentLocation) {
       setLocationText(
-        `📍 Location found (${state.currentLocation.lat.toFixed(3)}, ${state.currentLocation.lng.toFixed(3)})`
+        `Location found (${state.currentLocation.lat.toFixed(3)}, ${state.currentLocation.lng.toFixed(3)})`
       );
     } else {
-      setLocationText('📍 Using default location (New York)');
+      setLocationText('Using default location (New York)');
     }
   };
 
@@ -98,8 +192,8 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleInterestToggle = async (interestId) => {
+    // Toggle interest (this now auto-saves in the context)
     toggleInterest(interestId);
-    await saveUserPreferences();
     
     // Auto-search for selected interests
     if (state.selectedInterests.includes(interestId) || state.selectedInterests.length === 0) {
@@ -174,6 +268,7 @@ export default function HomeScreen({ navigation }) {
       if (state.selectedInterests.length > 0) {
         await loadRecommendations();
       }
+      await checkTravelModeStatus();
     } catch (error) {
       console.error('Refresh error:', error);
     } finally {
@@ -203,18 +298,10 @@ export default function HomeScreen({ navigation }) {
     }
 
     try {
-      // Update the interests in context
+      // Update the interests in context (this will auto-save)
       dispatch({ type: 'SET_SELECTED_INTERESTS', payload: tempSelectedInterests });
       
-      // Save to AsyncStorage
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        await AsyncStorage.setItem(
-          `interests_${userId}`,
-          JSON.stringify(tempSelectedInterests)
-        );
-      }
-
+      // Save preferences
       await saveUserPreferences();
       setShowPreferencesModal(false);
       
@@ -237,6 +324,15 @@ export default function HomeScreen({ navigation }) {
 
   const handleLogout = async () => {
     try {
+      // Disable travel mode on logout
+      if (travelModeEnabled) {
+        await NotificationService.disableTravelMode();
+      }
+      
+      // Clear user data
+      await clearUserData();
+      
+      // Sign out
       await signOut(auth);
       navigation.replace('Login');
     } catch (error) {
@@ -252,13 +348,67 @@ export default function HomeScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header with Settings + Logout */}
+        {/* Header with Logout */}
         <View style={styles.header}>
           <View style={styles.rightButtons}>
             <TouchableOpacity style={[styles.iconButton, styles.logoutBtn]} onPress={handleLogout}>
               <MaterialIcons name="logout" size={24} color="white" />
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Travel Mode Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="explore" size={24} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Travel Mode</Text>
+          </View>
+          <Text style={styles.sectionSubtitle}>
+            Get notifications about authentic places every 2 minutes while exploring
+          </Text>
+          
+          <View style={styles.travelModeContainer}>
+            <View style={styles.travelModeInfo}>
+              <Text style={styles.travelModeLabel}>
+                {travelModeEnabled ? 'Travel Mode Active' : 'Travel Mode Inactive'}
+              </Text>
+              <Text style={styles.travelModeDescription}>
+                {travelModeEnabled 
+                  ? 'Receiving location-based recommendations' 
+                  : 'Enable to get real-time discoveries'
+                }
+              </Text>
+            </View>
+            
+            <TouchableOpacity
+              style={[
+                styles.travelModeToggle,
+                travelModeEnabled && styles.travelModeToggleActive,
+                isEnablingTravelMode && styles.travelModeToggleDisabled
+              ]}
+              onPress={handleTravelModeToggle}
+              disabled={isEnablingTravelMode}
+            >
+              {isEnablingTravelMode ? (
+                <MaterialIcons name="hourglass-empty" size={24} color="white" />
+              ) : (
+                <MaterialIcons 
+                  name={travelModeEnabled ? "location-on" : "location-off"} 
+                  size={24} 
+                  color="white" 
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {state.selectedInterests.length === 0 && (
+            <View style={styles.warningContainer}>
+              <MaterialIcons name="warning" size={16} color={colors.warning} />
+              <Text style={styles.warningText}>
+                Select at least one interest to enable Travel Mode
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Recommendations Section */}
@@ -310,7 +460,6 @@ export default function HomeScreen({ navigation }) {
             />
         ))}
         </View>
-
 
         {/* Search Section */}
         <View style={styles.section}>
@@ -415,11 +564,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginLeft: 10,
   },
-  settingsBtn: {
-    backgroundColor: '#007BFF', // Blue
-  },
   logoutBtn: {
-    backgroundColor: '#000000', // Black
+    backgroundColor: '#000000',
   },
   section: {
     backgroundColor: 'white',
@@ -449,6 +595,56 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: 15,
   },
+  // Travel Mode Styles
+  travelModeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  travelModeInfo: {
+    flex: 1,
+  },
+  travelModeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  travelModeDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  travelModeToggle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.textSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 15,
+  },
+  travelModeToggleActive: {
+    backgroundColor: colors.primary,
+  },
+  travelModeToggleDisabled: {
+    opacity: 0.6,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#f59e0b',
+    marginLeft: 8,
+    flex: 1,
+  },
   recommendationsScroll: {
     marginHorizontal: -10,
   },
@@ -457,18 +653,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   interestsGrid: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  justifyContent: 'center', // center instead of space-between
-  gap: 12, // spacing between buttons
-  paddingHorizontal: 10,
-  marginTop: 10,
-},
-
-interestCard: {
-  width: 140, // fixed width, not % based
-  marginBottom: 12,
-},
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 10,
+    marginTop: 10,
+  },
+  interestCard: {
+    width: 140,
+    marginBottom: 12,
+  },
   locationInfo: {
     flexDirection: 'row',
     alignItems: 'center',

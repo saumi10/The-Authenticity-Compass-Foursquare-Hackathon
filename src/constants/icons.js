@@ -14,7 +14,7 @@ export const placeIcons = {
   'American Restaurant': 'restaurant',
   'Italian Restaurant': 'restaurant',
   'New American Restaurant': 'restaurant',
-  'Café': 'coffee',
+  'Café': 'local-cafe',
   'Bookstore': 'book',
   'Art Gallery': 'palette',
   'Music Venue': 'music-note',

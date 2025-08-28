@@ -2,6 +2,7 @@ export const colors = {
   // Primary gradient colors
   primary: '#667eea',
   primaryDark: '#764ba2',
+  primaryLight: '#9669e4e7',
   
   // Background colors
   background: '#f8f9fa',

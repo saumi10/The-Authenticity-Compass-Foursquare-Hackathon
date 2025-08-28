@@ -13,8 +13,6 @@ import { useAppContext } from '../contexts/AppContext';
 import { colors } from '../constants/colors';
 import InterestCard from '../components/InterestCard';
 import CustomButton from '../components/CustomButton';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth } from "../../firebase"; // adjust relative path if needed
 
 const interests = [
   { id: 'coffee shop', label: 'Coffee Shops', icon: 'local-cafe' },
@@ -31,16 +29,14 @@ export default function WelcomeScreen({ navigation }) {
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        const flag = await AsyncStorage.getItem(`onboardingDone_${userId}`);
-        if (flag) {
-          navigation.replace('Home');
-        }
+      // If user has already completed onboarding, go to Home
+      if (state.hasCompletedOnboarding) {
+        navigation.replace('Home');
       }
     };
+    
     checkOnboarding();
-  }, [navigation]);
+  }, [state.hasCompletedOnboarding, navigation]);
 
   const handleStartJourney = async () => {
     if (state.selectedInterests.length === 0) {
@@ -51,7 +47,7 @@ export default function WelcomeScreen({ navigation }) {
     setIsLocationLoading(true);
 
     try {
-      // Try to get location with a timeout (so it doesn’t hang forever)
+      // Try to get location with a timeout
       const locationPromise = getCurrentLocation();
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Location timeout")), 5000)
@@ -63,18 +59,12 @@ export default function WelcomeScreen({ navigation }) {
     }
 
     try {
+      // Complete onboarding (this will save preferences automatically)
       await completeOnboarding();
-
-      const userId = auth.currentUser?.uid;
-      if (userId) {
-        await AsyncStorage.setItem(`onboardingDone_${userId}`, "true");
-        await AsyncStorage.setItem(
-          `interests_${userId}`,
-          JSON.stringify(state.selectedInterests)
-        );
-      }
-
       navigation.replace('Home');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      Alert.alert('Error', 'Failed to complete setup. Please try again.');
     } finally {
       setIsLocationLoading(false);
     }
