@@ -219,3 +219,6 @@ This project is licensed under the MIT License.
 - [Foursquare](https://foursquare.com/) for their comprehensive and easy-to-use Places API
 - [Google](https://ai.google.dev/) for the powerful and creative capabilities of the Gemini API
 - The React Native & Expo teams for making mobile development accessible
+
+## Prototype Demo
+https://youtu.be/UHQglS1UrnQ?si=pGjxHhw1ncCAzT39
