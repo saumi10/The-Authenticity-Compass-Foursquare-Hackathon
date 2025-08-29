@@ -211,6 +211,9 @@ authenticity-compass-mobile/
 - **Photo Integration**: Fetch and display photos for each place from the Foursquare API
 - **Advanced Filtering**: Add more filters for results, such as price, opening hours, and specific features
 
+## 📄 License
+This project is licensed under the MIT License. 
+
 ## 🙏 Acknowledgements
 
 - [Foursquare](https://foursquare.com/) for their comprehensive and easy-to-use Places API
