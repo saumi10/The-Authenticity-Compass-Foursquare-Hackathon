@@ -13,6 +13,9 @@ import ResultsScreen from './src/screens/ResultsScreen';
 import PlaceDetailsScreen from './src/screens/PlaceDetailsScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignUpScreen';
+import { LogBox } from "react-native";
+// Ignore all log notifications
+LogBox.ignoreAllLogs(true);
 
 const Stack = createStackNavigator();
 

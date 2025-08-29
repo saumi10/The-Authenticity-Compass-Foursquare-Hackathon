@@ -1,5 +1,5 @@
 // API Service to maintain backend connection
-const BASE_URL = "http://192.168.1.10:3000"; // Change this to your backend URL
+const BASE_URL = "http://192.168.1.8:3000"; // Change this to your backend URL
 
 class ApiService {
   async makeRequest(endpoint, options = {}) {
