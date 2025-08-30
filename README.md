@@ -226,3 +226,6 @@ This project is licensed under the MIT License.
 
 ## 🎥 Prototype Demo
 https://www.youtube.com/watch?v=0BXS_QB2d7Q
+
+## 📱 App Screenshots
+https://drive.google.com/drive/folders/1jJtbC1SqCWVB1TdhTt7Dqxhs6iryBURW?usp=sharing
