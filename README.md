@@ -203,13 +203,17 @@ authenticity-compass-mobile/
 └── package.json
 ```
 
-## 🔮 Future Improvements
+## 🔮 Future Improvements  
 
-- **Interactive Map View**: Display all recommendations and search results on a map
-- **User Profiles & Saved Places**: Allow users to save their favorite authentic discoveries to a profile
-- **User-Submitted Reviews**: Let users add their own reviews and ratings to contribute to the authenticity score
-- **Photo Integration**: Fetch and display photos for each place from the Foursquare API
-- **Advanced Filtering**: Add more filters for results, such as price, opening hours, and specific features
+1. **Community Quests** – Enable users to create and share their own discovery quests.  
+2. **Loyalty & Rewards** – Partner with local businesses to offer exclusive discounts and reward programs.  
+3. **Multilingual Support** – Expand to multiple languages and adapt to cultural nuances globally.  
+4. **Interactive Map View** – Display all recommendations and search results on a map.  
+5. **User Profiles & Saved Places** – Allow users to save and manage their favorite authentic discoveries.  
+6. **User-Submitted Reviews** – Let users contribute reviews and ratings that influence the authenticity score.  
+7. **Photo Integration** – Fetch and display place photos directly from the Foursquare API.  
+8. **Advanced Filtering** – Add filters like price, opening hours, and amenities for more personalized search results.  
+
 
 ## 📄 License
 This project is licensed under the MIT License. 
@@ -221,4 +225,4 @@ This project is licensed under the MIT License.
 - The React Native & Expo teams for making mobile development accessible
 
 ## 🎥 Prototype Demo
-https://youtu.be/UHQglS1UrnQ?si=pGjxHhw1ncCAzT39
+https://www.youtube.com/watch?v=0BXS_QB2d7Q
